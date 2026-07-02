@@ -1,9 +1,11 @@
 import os
-from dotenv import load_dotenv
 import asyncio
-from twitchio.ext import commands, routines
-from groq import AsyncGroq
+from dotenv import load_dotenv
 from collections import deque
+from twitchio.ext import commands, routines
+
+from ai_brain import MinnarinoBrain
+from utils import simulated_typing_delay
 
 # Load environment variables from .env file
 load_dotenv()
@@ -20,18 +22,12 @@ class Bot(commands.Bot):
             initial_channels=['minnarinoo']
         )
 
-        self.ai_client = AsyncGroq(api_key=os.getenv("GROQ_API_KEY"))
-
-        # Load the bot's personality (system prompt) from an external file
-        with open("soul.txt", "r", encoding="utf-8") as file:
-            self.system_prompt = file.read()
-
+        # Initialize the AI brain for generating responses
+        self.brain = MinnarinoBrain()
         # Keywords that trigger the bot's direct response
         self.aliases = ["minnarino", "minnarinoo", "minna", "rino"]
-        
         # Short-term memory storing the last 10 chat messages
         self.chat_history = deque(maxlen=10)
-
         # Counter to track human chat activity and prevent the bot from talking to itself
         self.human_messages = 0
     
@@ -60,13 +56,9 @@ class Bot(commands.Bot):
         if any(alias in msg_lower for alias in self.aliases):
             print(f'[BOT-AI]: Thinking and writing response...')
 
-            ai_response = await self.think_response()
+            ai_response = await self.brain.think_response(self.chat_history)
 
-            # Simulate human reading and typing delay
-            read_time = 5.0
-            write_time = len(ai_response) * 0.05
-            total_delay = read_time + write_time
-            await asyncio.sleep(total_delay)
+            await simulated_typing_delay(ai_response, read_time=5.0)
 
             await message.channel.send(ai_response)
             print(f'[BOT-AI]: {ai_response}')
@@ -78,63 +70,28 @@ class Bot(commands.Bot):
             self.human_messages = 0
         
         await self.handle_commands(message)
-    
-    async def think_response(self):
-        # Format the memory into a single text block
-        chat_context = "\n".join(self.chat_history)
-
-        final_instructions = f"Ecco gli ultimi messaggi della chat di Twitch:\n{chat_context}\n\nRispondi in modo naturale e coerente all'ultimo messaggio come se fossi Minnarino."
-
-        # Make an asynchronous call to the Groq API
-        chat_completion = await self.ai_client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": self.system_prompt},
-                {"role": "user", "content": final_instructions}
-            ],
-            model="llama-3.3-70b-versatile",
-        )
-
-        return chat_completion.choices[0].message.content
 
     # Background task running every 60 seconds
     @routines.routine(seconds=60)
     async def spontaneous_loop(self):
-        print(f'[BACKGROUND]: Timer triggered. Checking for spontaneous response opportunity...')
-
         # Skip if there hasn't been enough human activity (avoids AI echo chamber)
         if self.human_messages < 3:
             print(f'[BACKGROUND]: Chat history too short for spontaneous response. Skipping.')
             return
 
+        print(f'[BACKGROUND]: Timer triggered. Checking for spontaneous response opportunity...')
         twitch_channel = self.connected_channels[0]
 
-        ai_response = await self.think_spontaneously()
+        ai_response = await self.brain.think_spontaneously(self.chat_history)
 
-        # Simulate typing delay (no reading time needed here)
-        write_time = len(ai_response) * 0.05
-        await asyncio.sleep(write_time)
+        await simulated_typing_delay(ai_response, read_time=0.0)
 
         await twitch_channel.send(ai_response)
         print(f'[BOT-AI]: {ai_response}')
 
         self.chat_history.append(f'{self.nick}: {ai_response}')
         self.human_messages = 0
-    
-    async def think_spontaneously(self):
-        chat_context = "\n".join(self.chat_history)
 
-        final_instructions = f"Ecco la chat:\n{chat_context}\n\nFai un'osservazione spontanea o una battuta su quello di cui stanno parlando. Non rispondere a una persona in particolare, comportati come uno che si intromette nel discorso."
-
-        chat_completion = await self.ai_client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": self.system_prompt},
-                {"role": "user", "content": final_instructions}
-            ],
-            model="llama-3.3-70b-versatile",
-        )
-
-        return chat_completion.choices[0].message.content
-
-
-bot = Bot()
-bot.run()
+if __name__ == "__main__":
+    bot = Bot()
+    bot.run()

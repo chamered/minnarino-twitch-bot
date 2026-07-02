@@ -25,9 +25,9 @@ This project is heavily inspired by the Italian content creator **[Enkk](https:/
    source venv/bin/activate # On Mac/Linux
    ```
 
-3. Install dependencies:
+3. Install all the required dependencies:
    ```bash
-   pip install twitchio groq python-dotenv
+   pip install -r requirements.txt
    ```
 
 4. Create a `.env` file in the root directory and add your keys:
