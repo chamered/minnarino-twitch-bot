@@ -1,5 +1,5 @@
 from textual.app import App, ComposeResult
-from textual.widgets import Header, Footer, RichLog
+from textual.widgets import Header, Footer, RichLog, Input
 from textual.containers import Horizontal, Vertical
 from core.bot import Bot
 
@@ -33,7 +33,7 @@ class MinnarinoDashboard(App):
     """
 
     TITLE = "Minnarino Bot - Control Center"
-    BINDINGS = [("q", "quit", "Quit Dashboard")]
+    BINDINGS = [("q", "quit", "quit")]
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -43,6 +43,7 @@ class MinnarinoDashboard(App):
             with Vertical(id="right_panel"):
                 yield RichLog(id="bot_log", highlight=True, markup=True, wrap=True, min_width=0)
                 yield RichLog(id="system_log", highlight=True, markup=True, wrap=True, min_width=0)
+        yield Input(placeholder="Insert a fact (eg. we are playing Minecraft) or write /clear to reset...", id="fact_input")
         yield Footer()
     
     async def on_mount(self) -> None:
@@ -66,6 +67,20 @@ class MinnarinoDashboard(App):
         else:
             system_log = self.query_one("#system_log", RichLog)
             system_log.write(message)
+    
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        text = event.value.strip()
+        if not text:
+            return
+        
+        if text.lower() == "/clear":
+            self.bot.brain.clear_facts()
+            self.route_log("[SYSTEM] Facts memory cleared.")
+        else:
+            self.bot.brain.add_fact(text)
+            self.route_log(f"[SYSTEM] Added fact: {text}")
+        
+        event.input.value = ""
 
 if __name__ == "__main__":
     app = MinnarinoDashboard()
