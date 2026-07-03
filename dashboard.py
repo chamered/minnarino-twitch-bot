@@ -8,6 +8,8 @@ class MinnarinoDashboard(App):
     RichLog {
         padding: 1;
         background: #000000;
+        overflow-y: auto;
+        overflow-x: hidden;
     }
     #chat_log {
         width: 50%;
@@ -36,11 +38,11 @@ class MinnarinoDashboard(App):
     def compose(self) -> ComposeResult:
         yield Header()
         with Horizontal():
-            yield RichLog(id="chat_log", highlight=False, markup=True, wrap=True)
+            yield RichLog(id="chat_log", highlight=False, markup=True, wrap=True, min_width=0)
 
             with Vertical(id="right_panel"):
-                yield RichLog(id="bot_log", highlight=True, markup=True, wrap=True)
-                yield RichLog(id="system_log", highlight=True, markup=True, wrap=True)
+                yield RichLog(id="bot_log", highlight=True, markup=True, wrap=True, min_width=0)
+                yield RichLog(id="system_log", highlight=True, markup=True, wrap=True, min_width=0)
         yield Footer()
     
     async def on_mount(self) -> None:
