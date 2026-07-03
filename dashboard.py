@@ -1,7 +1,7 @@
 from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer, RichLog
 from textual.containers import Horizontal, Vertical
-from bot import Bot
+from core.bot import Bot
 
 class MinnarinoDashboard(App):
     CSS = """

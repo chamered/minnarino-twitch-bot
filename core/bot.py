@@ -5,8 +5,8 @@ from collections import deque
 from twitchio.ext import commands
 from rich.markup import escape
 
-from ai_brain import MinnarinoBrain
-from utils import simulated_typing_delay
+from core.ai_brain import MinnarinoBrain
+from core.utils import simulated_typing_delay
 
 load_dotenv()
 

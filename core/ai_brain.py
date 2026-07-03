@@ -5,7 +5,7 @@ class MinnarinoBrain:
     def __init__(self):
         self.client = AsyncGroq(api_key=os.getenv("GROQ_API_KEY"))
 
-        with open("soul.txt", "r", encoding="utf-8") as file:
+        with open("data/soul.txt", "r", encoding="utf-8") as file:
             self.system_prompt = file.read()
     
     async def think_response(self, chat_history):
