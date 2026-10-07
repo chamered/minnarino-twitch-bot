@@ -4,6 +4,7 @@ from textual.containers import Horizontal, Vertical
 from core.bot import Bot
 
 class MinnarinoDashboard(App):
+    """Control-center TUI: live chat on the left, bot and system logs on the right."""
     CSS = """
     RichLog {
         padding: 1;
@@ -36,6 +37,7 @@ class MinnarinoDashboard(App):
     BINDINGS = [("q", "quit", "quit")]
 
     def compose(self) -> ComposeResult:
+        """Build the UI layout: chat log, bot log, system log and the fact input."""
         yield Header()
         with Horizontal():
             yield RichLog(id="chat_log", highlight=False, markup=True, wrap=True, min_width=0)
@@ -47,6 +49,7 @@ class MinnarinoDashboard(App):
         yield Footer()
     
     async def on_mount(self) -> None:
+        """Title the panels and start the bot in a background worker."""
         chat_log = self.query_one("#chat_log", RichLog)
         bot_log = self.query_one("#bot_log", RichLog)
         system_log = self.query_one("#system_log", RichLog)
@@ -58,6 +61,7 @@ class MinnarinoDashboard(App):
         self.route_log("[SYSTEM] Dashboard initialized. Bot is starting...")
     
     def route_log(self, message: str) -> None:
+        """Route a log line to its panel: chat if it starts with [cyan], bot if it starts with '>', otherwise system."""
         if message.startswith("[cyan]"):
             chat_log = self.query_one("#chat_log", RichLog)
             chat_log.write(message)
@@ -69,6 +73,7 @@ class MinnarinoDashboard(App):
             system_log.write(message)
     
     async def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Store the submitted text as a fact, or clear all facts when the input is /clear."""
         text = event.value.strip()
         if not text:
             return
