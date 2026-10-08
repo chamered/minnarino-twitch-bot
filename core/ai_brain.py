@@ -45,7 +45,7 @@ class MinnarinoBrain:
         context = ""
 
         if self.facts:
-            context += "[CONTESTO ATTUALE DELLA LIVE - tienine conto per capire la situazione]:\n"
+            context += "[CONTESTO ATTUALE DELLA LIVE - usa queste info per capire la situazione, ma non ripeterle a pappagallo]:\n"
             for fact in self.facts:
                 context += f"- {fact}\n"
             context += "\n"
@@ -62,7 +62,12 @@ class MinnarinoBrain:
     async def think_spontaneously(self, chat_history):
         """Generate an unprompted observation that jumps into the ongoing conversation."""
         full_context = self._build_context(chat_history)
-        instructions = f"{full_context}\n\nFai un'osservazione spontanea o una battuta. Non rispondere a una persona in particolare, comportati come uno che si intromette nel discorso."
+        instructions = (
+            f"{full_context}\n\n"
+            "Fai un'osservazione spontanea o una battuta basandoti sugli appunti della live o sulla chat. "
+            "REGOLA VITALE: Ricorda che tu sei uno SPETTATORE, non sei lo streamer. NON ringraziare MAI per follow, sub o donazioni, perché non è il tuo canale. "
+            "Se lo streamer ha parlato di te, reagisci da spettatore (es. facendo il figo, o rispondendo a tono)."
+        )
         return await self._call_api(instructions)
     
     async def _call_api(self, user_instruction: str) -> str:
