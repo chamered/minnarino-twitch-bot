@@ -78,25 +78,36 @@ class MinnarinoBrain:
 
     async def check_intent(self, chat_history, author: str, message_content: str) -> bool:
         """Ask the model for a plain YES/NO verdict on whether the latest message targets the bot."""
-        recent_context = "\n".join(list(chat_history)[-5:])
+        recent_context = "\n".join(list(chat_history)[:-1][-4:])
         
-        prompt = (
-            "Sei un arbitro logico. Il tuo scopo è analizzare la chat e rispondere SOLO con 'YES' o 'NO'.\n"
-            f"Contesto della chat:\n{recent_context}\n\n"
-            f"L'utente '{author}' ha appena scritto: '{message_content}'.\n"
-            "Domanda: Considerando che il bot si chiama 'minnarino' e stava conversando recentemente con questo utente, questo nuovo messaggio è chiaramente rivolto a minnarino o è la continuazione del loro discorso?\n"
-            "Rispondi SOLO YES o NO senza alcuna punteggiatura o testo aggiuntivo."
+        psystem_prompt = (
+            "Sei un analista di chat. Il tuo unico scopo è rispondere 'YES' o 'NO'.\n"
+            "REGOLA AUREA: Se un utente fa una domanda generica (es. 'come stai?', 'davvero?') dopo che il bot "
+            "'minnarino' gli ha appena parlato, assumi sempre che stia continuando a parlargli. Rispondi NO solo se tagga un'altra persona."
+        )
+        
+        user_prompt = (
+            f"CONTESTO DELLA CHAT:\n{recent_context}\n\n"
+            f"NUOVO MESSAGGIO:\nL'utente '{author}' ha scritto: '{message_content}'\n\n"
+            f"DOMANDA LOGICA: '{author}' sta continuando a parlare con minnarino? Rispondi solo YES o NO."
         )
         
         try:
             response = await self.client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                model="openai/gpt-oss-120b",
-                max_tokens=5,
-                temperature=0.0
+                messages=[
+                    {"role": "system", "content": psystem_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                model="openai/gpt-oss-120b"
             )
-            answer = response.choices[0].message.content.strip().upper()
+
+            raw_answer = response.choices[0].message.content
+            #if not raw_answer:
+            #    return False, "API RESPONSE EMPTY"
+            
+            answer = raw_answer.strip().upper()
+
             return "YES" in answer
-        except Exception:
+        except Exception as e:
             # On API errors assume the message is not for us, to avoid unwanted replies
             return False
