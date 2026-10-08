@@ -80,7 +80,7 @@ class MinnarinoBrain:
         """Ask the model for a plain YES/NO verdict on whether the latest message targets the bot."""
         recent_context = "\n".join(list(chat_history)[:-1][-4:])
         
-        psystem_prompt = (
+        system_prompt = (
             "Sei un analista di chat. Il tuo unico scopo è rispondere 'YES' o 'NO'.\n"
             "REGOLA AUREA: Se un utente fa una domanda generica (es. 'come stai?', 'davvero?') dopo che il bot "
             "'minnarino' gli ha appena parlato, assumi sempre che stia continuando a parlargli. Rispondi NO solo se tagga un'altra persona."
@@ -95,7 +95,7 @@ class MinnarinoBrain:
         try:
             response = await self.client.chat.completions.create(
                 messages=[
-                    {"role": "system", "content": psystem_prompt},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
                 model="openai/gpt-oss-120b"
