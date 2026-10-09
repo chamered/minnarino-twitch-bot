@@ -69,6 +69,17 @@ class MinnarinoBrain:
             "Se lo streamer ha parlato di te, reagisci da spettatore (es. facendo il figo, o rispondendo a tono)."
         )
         return await self._call_api(instructions)
+
+    async def think_directed(self, chat_history, director_instruction: str):
+        """Generate a response that follows a specific instruction from the streamer, while staying in character."""
+        full_context = self._build_context(chat_history)
+        instructions = (
+            f"{full_context}\n\n"
+            f"ISTRUZIONE DEL REGISTA (DA ESEGUIRE ORA): {director_instruction}\n\n"
+            "Scrivi il tuo prossimo messaggio in chat seguendo esattamente questa istruzione. "
+            "Mantieni sempre il tuo stile (minuscolo, informale, breve) ma fai esattamente quello che ti ha chiesto il regista."
+        )
+        return await self._call_api(instructions)
     
     async def _call_api(self, user_instruction: str) -> str:
         """Send the system prompt plus the instructions to Groq and return the answer text."""

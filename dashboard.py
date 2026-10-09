@@ -45,7 +45,7 @@ class MinnarinoDashboard(App):
             with Vertical(id="right_panel"):
                 yield RichLog(id="bot_log", highlight=True, markup=True, wrap=True, min_width=0)
                 yield RichLog(id="system_log", highlight=True, markup=True, wrap=True, min_width=0)
-        yield Input(placeholder="Insert a fact (eg. we are playing Minecraft) or write /clear to reset...", id="fact_input")
+        yield Input(placeholder="Control Command (e.g., 'greet everyone') | /fact [text] for memory | /clear to reset...", id="fact_input")
         yield Footer()
     
     async def on_mount(self) -> None:
@@ -81,9 +81,13 @@ class MinnarinoDashboard(App):
         if text.lower() == "/clear":
             self.bot.brain.clear_facts()
             self.route_log("[SYSTEM] Facts memory cleared.")
+        elif text.lower().startswith("/fact "):
+            fact = text[6:].strip()
+            self.bot.brain.add_fact(fact)
+            self.route_log(f"[SYSTEM] New fact added in background: {fact}")
         else:
-            self.bot.brain.add_fact(text)
-            self.route_log(f"[SYSTEM] Added fact: {text}")
+            # If it doesn't start with /fact or /clear, treat it as a direct command to the bot
+            self.bot.force_directed_reply(text)
         
         event.input.value = ""
 

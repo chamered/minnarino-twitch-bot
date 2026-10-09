@@ -25,6 +25,7 @@ class Bot(commands.Bot):
         self.chat_history = deque(maxlen=10)
         self.human_messages = 0
         self.active_conversations = {}
+        last_message_time = time.time()
         self.gui_log = gui_log_callback
     
     def log(self, message: str):
@@ -88,23 +89,33 @@ class Bot(commands.Bot):
             self.human_messages = 0
             
             self.active_conversations[author] = time.time()
+            self.last_message_time = time.time()
         
         await self.handle_commands(message)
 
     async def spontaneous_loop(self):
-        """Every 60 seconds, post an AI observation if at least 3 human messages arrived since the last bot post."""
+        """Dynamic timer: triggers 60 seconds after the bot's last message."""
         while True:
-            await asyncio.sleep(60)
+            # Calculate the time to wait until the next spontaneous message
+            time_since_last = time.time() - self.last_message_time
+            time_left = 60.0 - time_since_last
+
+            if time_left > 0:
+                await asyncio.sleep(time_left)
+                continue
 
             try:
                 if self.human_messages < 3:
-                    self.log('[BACKGROUND] Chat history too short. Skipping spontaneous reply.')
+                    #self.log('[BACKGROUND] Chat history too short. Skipping spontaneous reply.')
+                    #continue
+                    self.last_message_time = time.time()
                     continue
 
                 self.log('[BACKGROUND] Timer fired with enough activity. Generating a spontaneous message...')
 
                 if not self.connected_channels:
                     self.log('[BACKGROUND] Error: No connected channels. Spontaneous loop stopped.')
+                    self.last_message_time = time.time()
                     return
                 
                 twitch_channel = self.connected_channels[0]
@@ -117,5 +128,36 @@ class Bot(commands.Bot):
 
                 self.chat_history.append(f'{self.nick}: {ai_response}')
                 self.human_messages = 0
+                self.last_message_time = time.time()
             except Exception as e:
                 self.log(f'[BACKGROUND] Unexpected error in spontaneous loop: {e}')
+                self.last_message_time = time.time()
+
+    def force_directed_reply(self, instruction: str):
+        """Receive the command from the Dashboard and launch the asynchronous task."""
+        asyncio.create_task(self._async_force_reply(instruction))
+
+    async def _async_force_reply(self, instruction: str):
+        """Execute the director's instruction by generating a directed response and sending it to chat."""
+        self.log(f'[SYSTEM] Director action: "{instruction}"')
+        
+        if not self.connected_channels:
+            self.log('[SYSTEM] Error: No connected channels for sending the message.')
+            return
+            
+        twitch_channel = self.connected_channels[0]
+        
+        try:
+            ai_response = await self.brain.think_directed(self.chat_history, instruction)
+            
+            await simulated_typing_delay(ai_response, read_time=0.0)
+            
+            await twitch_channel.send(ai_response)
+            self.log(f'> {ai_response}')
+            
+            self.chat_history.append(f'{self.nick}: {ai_response}')
+            self.human_messages = 0
+            self.last_message_time = time.time()
+            
+        except Exception as e:
+            self.log(f'[SYSTEM] Error during director action: {e}')
