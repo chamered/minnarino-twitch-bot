@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import asyncio
 from dotenv import load_dotenv
@@ -25,7 +26,7 @@ class Bot(commands.Bot):
         self.chat_history = deque(maxlen=10)
         self.human_messages = 0
         self.active_conversations = {}
-        last_message_time = time.time()
+        self.last_message_time = time.time()
         self.gui_log = gui_log_callback
     
     def log(self, message: str):
@@ -57,7 +58,7 @@ class Bot(commands.Bot):
 
         msg_lower = message.content.lower()
 
-        is_tagged = any(alias in msg_lower for alias in self.aliases)
+        is_tagged = any(re.search(rf"\b{re.escape(alias)}\b", msg_lower) for alias in self.aliases)
         
         is_in_radar = False
         current_time = time.time()
@@ -80,6 +81,10 @@ class Bot(commands.Bot):
             self.log('[SYSTEM] The AI is processing the reply...')
 
             ai_response = await self.brain.think_response(self.chat_history)
+            if not ai_response:
+                self.log('[SYSTEM] Empty response from the AI. Skipping.')
+                await self.handle_commands(message)
+                return
             await simulated_typing_delay(ai_response, read_time=5.0)
 
             await message.channel.send(ai_response)
@@ -106,8 +111,7 @@ class Bot(commands.Bot):
 
             try:
                 if self.human_messages < 3:
-                    #self.log('[BACKGROUND] Chat history too short. Skipping spontaneous reply.')
-                    #continue
+                    self.log('[BACKGROUND] Chat history too short. Skipping spontaneous reply.')
                     self.last_message_time = time.time()
                     continue
 
@@ -121,6 +125,10 @@ class Bot(commands.Bot):
                 twitch_channel = self.connected_channels[0]
 
                 ai_response = await self.brain.think_spontaneously(self.chat_history)
+                if not ai_response:
+                    self.log('[BACKGROUND] Empty response from the AI. Skipping.')
+                    self.last_message_time = time.time()
+                    continue
                 await simulated_typing_delay(ai_response, read_time=0.0)
 
                 await twitch_channel.send(ai_response)
@@ -149,7 +157,9 @@ class Bot(commands.Bot):
         
         try:
             ai_response = await self.brain.think_directed(self.chat_history, instruction)
-            
+            if not ai_response:
+                self.log('[SYSTEM] Empty response from the AI. Skipping.')
+                return
             await simulated_typing_delay(ai_response, read_time=0.0)
             
             await twitch_channel.send(ai_response)

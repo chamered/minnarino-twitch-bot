@@ -90,7 +90,8 @@ class MinnarinoBrain:
             ],
             model="openai/gpt-oss-120b",
         )
-        return response.choices[0].message.content
+        content = response.choices[0].message.content
+        return content if content else ""
 
     async def check_intent(self, chat_history, author: str, message_content: str) -> bool:
         """Ask the model for a plain YES/NO verdict on whether the latest message targets the bot."""
@@ -118,12 +119,12 @@ class MinnarinoBrain:
             )
 
             raw_answer = response.choices[0].message.content
-            #if not raw_answer:
-            #    return False, "API RESPONSE EMPTY"
-            
+            if not raw_answer:
+                return False
+
             answer = raw_answer.strip().upper()
 
             return "YES" in answer
-        except Exception as e:
+        except Exception:
             # On API errors assume the message is not for us, to avoid unwanted replies
             return False
